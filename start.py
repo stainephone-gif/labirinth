@@ -1,5 +1,4 @@
 import cv2
-import numpy as np
 import sys
 import pygame
 import pymunk
@@ -99,7 +98,7 @@ def wait_for_fingerprint(filepath='Fingerprint.jpg', timeout=60):
     return False
 
 def count_line_crossings(image_path):
-    img = cv2.imread('Fingerprint.jpg', cv2.IMREAD_GRAYSCALE)
+    img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
     if img is None:
         print("Ошибка: изображение не найдено.")
         return 0
@@ -175,11 +174,11 @@ def add_rotating_circle_barriers(space, center, start_radius, radius_step, numbe
             remove_count = random.randint(1, 3)
             removed_indices = ensure_non_adjacent_indices(segments, remove_count)
 
-        for i in range(segments):
-            if i in removed_indices:
+        for j in range(segments):
+            if j in removed_indices:
                 continue
-            angle_start = 2 * math.pi * i / segments
-            angle_end = 2 * math.pi * (i + 1) / segments
+            angle_start = 2 * math.pi * j / segments
+            angle_end = 2 * math.pi * (j + 1) / segments
             start_pos = (radius * math.cos(angle_start), radius * math.sin(angle_start))
             end_pos = (radius * math.cos(angle_end), radius * math.sin(angle_end))
             shape = pymunk.Segment(body, start_pos, end_pos, thickness)
@@ -193,20 +192,6 @@ def add_rotating_circle_barriers(space, center, start_radius, radius_step, numbe
         rotation_bodies.append(body)
     return rotation_bodies
     
-def draw_button(screen, text, position, size, action=None):
-    font = pygame.font.SysFont("arial", 20)
-    text_render = font.render(text, True, (255, 255, 255))
-    button_rect = pygame.Rect(position[0], position[1], size[0], size[1])
-    pygame.draw.rect(screen, (0, 0, 255), button_rect)
-    text_rect = text_render.get_rect(center=button_rect.center)
-    screen.blit(text_render, text_rect)
-    
-    # Проверка нажатия кнопки
-    mouse_pos = pygame.mouse.get_pos()
-    click = pygame.mouse.get_pressed()
-    if button_rect.collidepoint(mouse_pos) and click[0] == 1 and action:
-        action()
-        
 def fingerprint_screen():
     global game_state
     screen.fill((0, 0, 0))
@@ -245,11 +230,10 @@ def main():
             fingerprint_screen()
             
         elif game_state == STATE_GAME_ACTIVE:
-            game_active = True  # Активируем игру
             screen.fill((0, 0, 0))
-            # После активации игры пользователем
-            # Анализ изображения и получение количества пересечений линий
             crossings = analyze_fingerprint('Fingerprint.jpg')
+            if crossings < 2:
+                crossings = 2
 
             space = pymunk.Space()
             space.gravity = (0, 900)
@@ -273,7 +257,11 @@ def main():
                             break  # Выход из внутреннего цикла
 
                 if game_state != STATE_GAME_ACTIVE:
-                    break  # Если состояние изменилось, выходим из игрового цикла
+                    break
+
+                if ball_body.position.y + ball_shape.radius >= screen_height:
+                    game_state = STATE_START_SCREEN
+                    break
 
                 keys = pygame.key.get_pressed()
                 if keys[pygame.K_KP4]:
