@@ -187,7 +187,7 @@ begin
 
 			if (rbtZKFinger9.Checked) then begin
 				pTemplate := ZKFPEngX1.DecodeTemplate1(sRegTemplate)
-				// Note: 10.0Template can not be compressed (��ѹ��)
+				// Note: 10.0Template can not be compressed (��ѹ��)
 				ZKFPEngX1.SetTemplateLen(pTemplate, 602);
 			end
 			else
@@ -196,7 +196,7 @@ begin
 			ZKFPEngX1.SaveTemplate('fingerprint.tpl', pTemplate);
 
 			Inc(FPID);
-      MessageDlg('Register Succeed��', mtInformation, [mbOK], 0);
+      MessageDlg('Register Succeed��', mtInformation, [mbOK], 0);
 		end
 		else
 		begin
@@ -244,6 +244,8 @@ begin
   with ZKFPEngX1 do
     PrintImageAt(Self.Canvas.Handle, 0, 0, ImageWidth, ImageHeight);
   iOld := GetTickCount;
+  // Автосохранение отпечатка в файл при каждом захвате
+  ZKFPEngX1.SaveJPG('Fingerprint.jpg');
 end;
 
 procedure TForm1.FormCreate(Sender: TObject);

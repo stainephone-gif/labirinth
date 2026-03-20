@@ -1,7 +1,5 @@
-import pyautogui
 import cv2
 import numpy as np
-import keyboard
 import sys
 import pygame
 import pymunk
@@ -10,8 +8,6 @@ import math
 import random
 import time
 import os
-from PIL import ImageGrab
-import win32gui
 
 def color_to_tuple(color):
     """Преобразует объект цвета в кортеж (R, G, B) или (R, G, B, A)."""
@@ -42,13 +38,10 @@ class CustomDrawOptions(pymunk.pygame_util.DrawOptions):
             # Обязательно включаем альфа-канал
             return (255, 255, 255, 0)  # Белый цвет с полной непрозрачностью
 
-# Устанавливаем позицию окна перед инициализацией Pygame
-os.environ['SDL_VIDEO_WINDOW_POS'] = "-7,-780"
-
 # Инициализация Pygame
 pygame.init()
 screen_width, screen_height = 1040, 810
-screen = pygame.display.set_mode((screen_width, screen_height), pygame.NOFRAME)
+screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Game")
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("arial", 20)
@@ -78,45 +71,32 @@ def start_screen():
                 waiting_for_keypress = False
                 game_state = STATE_LOAD_FINGERPRINT
 
-def set_should_analyze_image_true():
-    global should_analyze_image
-    should_analyze_image = True
-    print("Флаг установлен. Готовы к анализу.")
+def wait_for_fingerprint(filepath='Fingerprint.jpg', timeout=60):
+    """Ждёт появления или обновления файла отпечатка. Возвращает True если файл обновился."""
+    # Запоминаем время модификации файла (если он уже существует)
+    old_mtime = None
+    if os.path.exists(filepath):
+        old_mtime = os.path.getmtime(filepath)
 
-def save_image(image_path='saved_image.png'):
-    global should_analyze_image
-    # Попытка найти кнопку "Save Image" на экране
-    button_location = pyautogui.locateOnScreen('SaveImage.png', confidence=0.8)
-    if button_location:
-        # Если найдено, нажимаем на середину кнопки
-        pyautogui.click(pyautogui.center(button_location))
-        print("Изображение сохранено.")
-        should_analyze_image = True  # Устанавливаем флаг в True
-    else:
-        # Если кнопка не найдена, выводим сообщение об ошибке
-        print("Кнопка 'Save Image' не найдена. Убедитесь, что изображение на экране.")
-        
-    time.sleep(0.3)
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        # Обрабатываем события pygame чтобы окно не зависало
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
 
-    button_location = pyautogui.locateOnScreen('OK.png', confidence=0.8)
-    if button_location:
-        # Если найдено, нажимаем на середину кнопки
-        pyautogui.click(pyautogui.center(button_location))
-        should_analyze_image = True  # Устанавливаем флаг в True
-    else:
-        # Если кнопка не найдена, выводим сообщение об ошибке
-        print("Кнопка 'OK' не найдена. Убедитесь, что изображение на экране.")
-        
-    hwnd = win32gui.FindWindow(None, "Demo")  # Находит окно по его заголовку
-    if hwnd:
-        win32gui.SetForegroundWindow(hwnd)  # Делает окно активным
-        x, y, x1, y1 = win32gui.GetWindowRect(hwnd)  # Получает координаты окна
-        image = ImageGrab.grab(bbox=(x, y, x1, y1))  # Делает скриншот области
-        resized_image = image.resize((350, 200))
-        resized_image.save("Screenshot.png")
-    else:
-        print("Окно не найдено")
-        return False
+        if os.path.exists(filepath):
+            current_mtime = os.path.getmtime(filepath)
+            if old_mtime is None or current_mtime > old_mtime:
+                time.sleep(0.2)  # Даём файлу дозаписаться
+                print("Отпечаток получен.")
+                return True
+
+        time.sleep(0.1)
+
+    print("Таймаут: отпечаток не получен.")
+    return False
 
 def count_line_crossings(image_path):
     img = cv2.imread('Fingerprint.jpg', cv2.IMREAD_GRAYSCALE)
@@ -230,34 +210,14 @@ def draw_button(screen, text, position, size, action=None):
 def fingerprint_screen():
     global game_state
     screen.fill((0, 0, 0))
-    load_text = font.render("Загрузить отпечаток", True, (0, 0, 0))
-    load_button_rect = pygame.Rect(screen_width // 2 - 100, screen_height // 2 - 25, 200, 50)
-    pygame.draw.rect(screen, (255, 255, 255), load_button_rect)
-    load_text_rect = load_text.get_rect(center=load_button_rect.center)
-    screen.blit(load_text, load_text_rect)
+    wait_text = font.render("Приложите палец к сканеру...", True, (255, 255, 255))
+    screen.blit(wait_text, (screen_width // 2 - wait_text.get_width() // 2, screen_height // 2 - wait_text.get_height() // 2))
     pygame.display.flip()
-    
-   # Указываем координаты кнопки "Загрузить отпечаток" на втором экране
-    # Эти координаты нужно будет настроить в соответствии с вашей конфигурацией экранов
-    button_x = 342  # X-координата кнопки на втором экране
-    button_y = -768  # Y-координата кнопки на втором экране
 
-    # Нажимаем на кнопку согласно координатам
-    pyautogui.click(button_x, button_y)
-
-    print("Попытка нажатия на кнопку выполнена.")
-    global should_analyze_image
-    should_analyze_image = True  # Предполагаем, что изображение было успешно загружено
-
-    waiting_for_button_press = True
-    while waiting_for_button_press:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            if event.type == pygame.MOUSEBUTTONDOWN and load_button_rect.collidepoint(event.pos):
-                waiting_for_button_press = False
-                game_state = STATE_GAME_ACTIVE
+    if wait_for_fingerprint():
+        game_state = STATE_GAME_ACTIVE
+    else:
+        game_state = STATE_START_SCREEN
     
 def main():
     global game_state, screen, clock
@@ -280,11 +240,7 @@ def main():
 
         if game_state == STATE_START_SCREEN:
             start_screen()
-            
-            # Выполнение действий перед началом игры
-            save_image()
-            crossings = analyze_fingerprint('saved_image.png')
-            
+
         elif game_state == STATE_LOAD_FINGERPRINT:
             fingerprint_screen()
             
@@ -293,15 +249,17 @@ def main():
             screen.fill((0, 0, 0))
             # После активации игры пользователем
             # Анализ изображения и получение количества пересечений линий
-            crossings = analyze_fingerprint('saved_image.png')
-            
+            crossings = analyze_fingerprint('Fingerprint.jpg')
+
             space = pymunk.Space()
             space.gravity = (0, 900)
             add_walls(space, screen_width, screen_height)
             rotation_bodies = add_rotating_circle_barriers(space, (300, 300), 50, 25, crossings)
             ball_body, ball_shape = add_ball(space, screen_width, screen_height)
-            
-            image = pygame.image.load('Screenshot.png')
+
+            # Загружаем изображение отпечатка для отображения в углу
+            fp_image = pygame.image.load('Fingerprint.jpg')
+            image = pygame.transform.scale(fp_image, (350, 200))
             
             # Игровой цикл
             while game_state == STATE_GAME_ACTIVE:  # Используем условие для выхода из цикла при смене состояния
