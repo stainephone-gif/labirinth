@@ -145,52 +145,69 @@ def add_walls(space, screen_width, screen_height):
     add_static_line(space, (0, 0), (0, screen_height))
     add_static_line(space, (screen_width, 0), (screen_width, screen_height))
 
-def ensure_non_adjacent_indices(total_segments, remove_count):
-    removed_indices = set()
-    while len(removed_indices) < remove_count:
-        index = random.randint(0, total_segments - 1)
-        if index not in removed_indices and (index - 1) % total_segments not in removed_indices and (index + 1) % total_segments not in removed_indices:
-            removed_indices.add(index)
-    return list(removed_indices)
+def add_spiral_barriers(space, center, start_radius, spacing, num_turns, segments_per_turn=30, gap_count=3, thickness=2):
+    """Создаёт лабиринт в виде спирали Архимеда с прорезями.
 
-def add_rotating_circle_barriers(space, center, start_radius, radius_step, number_of_circles, segments=30, thickness=2):
+    center — центр спирали
+    start_radius — начальный радиус
+    spacing — расстояние между витками
+    num_turns — количество витков спирали
+    segments_per_turn — сегментов на один виток
+    gap_count — количество прорезей на каждый виток
+    """
     center_x = screen_width // 3
     center_y = screen_height // 2
     center = (center_x, center_y)
-    
-    rotation_bodies = []
-    for i in range(number_of_circles):
-        radius = start_radius + i * radius_step
-        body = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
-        body.position = center
-        space.add(body)
 
-        if i == 0:
-            # Для первой окружности определяем индекс для удаления двух соседних сегментов
-            remove_index = random.randint(0, segments - 1)
-            removed_indices = {remove_index, (remove_index + 1) % segments}
-        else:
-            # У остальных окружностей удаляем от 1 до 3 случайных сегментов
-            remove_count = random.randint(1, 3)
-            removed_indices = ensure_non_adjacent_indices(segments, remove_count)
+    body = pymunk.Body(body_type=pymunk.Body.KINEMATIC)
+    body.position = center
+    space.add(body)
 
-        for j in range(segments):
-            if j in removed_indices:
-                continue
-            angle_start = 2 * math.pi * j / segments
-            angle_end = 2 * math.pi * (j + 1) / segments
-            start_pos = (radius * math.cos(angle_start), radius * math.sin(angle_start))
-            end_pos = (radius * math.cos(angle_end), radius * math.sin(angle_end))
-            shape = pymunk.Segment(body, start_pos, end_pos, thickness)
-            shape.elasticity = 0.95
-            
-            color = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255))
-            shape.color = color
-            
-            space.add(shape)
+    total_segments = num_turns * segments_per_turn
 
-        rotation_bodies.append(body)
-    return rotation_bodies
+    # Генерируем прорези: gap_count штук на каждый виток, не соседние
+    gap_indices = set()
+    for turn in range(num_turns):
+        turn_start = turn * segments_per_turn
+        gaps_this_turn = random.randint(max(1, gap_count - 1), gap_count + 1)
+        placed = 0
+        attempts = 0
+        while placed < gaps_this_turn and attempts < 200:
+            idx = turn_start + random.randint(0, segments_per_turn - 1)
+            # Проверяем что ни сам индекс, ни соседи не заняты
+            if idx not in gap_indices and (idx - 1) not in gap_indices and (idx + 1) not in gap_indices:
+                # Убираем 2 соседних сегмента для ширины прохода
+                gap_indices.add(idx)
+                gap_indices.add(idx + 1)
+                placed += 1
+            attempts += 1
+
+    # Коэффициент роста радиуса: b = spacing / (2*pi)
+    b = spacing / (2 * math.pi)
+
+    for seg in range(total_segments):
+        if seg in gap_indices:
+            continue
+
+        # Угол начала и конца сегмента
+        theta_start = 2 * math.pi * seg / segments_per_turn
+        theta_end = 2 * math.pi * (seg + 1) / segments_per_turn
+
+        # Радиус в каждой точке по формуле Архимеда: r = a + b*θ
+        r_start = start_radius + b * theta_start
+        r_end = start_radius + b * theta_end
+
+        start_pos = (r_start * math.cos(theta_start), r_start * math.sin(theta_start))
+        end_pos = (r_end * math.cos(theta_end), r_end * math.sin(theta_end))
+
+        shape = pymunk.Segment(body, start_pos, end_pos, thickness)
+        shape.elasticity = 0.95
+
+        shape.color = (255, 255, 255)
+
+        space.add(shape)
+
+    return [body]
     
 def fingerprint_screen():
     global game_state
@@ -238,7 +255,7 @@ def main():
             space = pymunk.Space()
             space.gravity = (0, 900)
             add_walls(space, screen_width, screen_height)
-            rotation_bodies = add_rotating_circle_barriers(space, (300, 300), 50, 25, crossings)
+            rotation_bodies = add_spiral_barriers(space, (300, 300), 30, 25, num_turns=crossings)
             ball_body, ball_shape = add_ball(space, screen_width, screen_height)
 
             # Загружаем изображение отпечатка для отображения в углу
