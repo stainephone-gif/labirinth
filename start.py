@@ -203,12 +203,7 @@ def add_spiral_barriers(space, center, start_radius, spacing, num_turns, segment
         shape = pymunk.Segment(body, start_pos, end_pos, thickness)
         shape.elasticity = 0.95
 
-        # Цвет плавно меняется вдоль спирали
-        hue = seg / total_segments
-        r = int(255 * (0.5 + 0.5 * math.sin(2 * math.pi * hue)))
-        g = int(255 * (0.5 + 0.5 * math.sin(2 * math.pi * hue + 2.094)))
-        b_col = int(255 * (0.5 + 0.5 * math.sin(2 * math.pi * hue + 4.189)))
-        shape.color = (r, g, b_col)
+        shape.color = (255, 255, 255)
 
         space.add(shape)
 
