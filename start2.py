@@ -58,43 +58,64 @@ STATE_GAME_ACTIVE = "game_active"
 # Начальное состояние игры
 game_state = STATE_START_SCREEN
 
-def _find_child_by_text(parent_hwnd, target_text):
-    """Ищет дочернее окно (кнопку) по тексту."""
-    result = [None]
+def _find_all_children(parent_hwnd):
+    """Рекурсивно собирает все дочерние окна (включая вложенные в панели)."""
+    children = []
     def callback(hwnd, _):
-        text = win32gui.GetWindowText(hwnd)
-        if target_text.lower() in text.lower():
-            result[0] = hwnd
-            return False  # Прекратить перебор
+        children.append(hwnd)
         return True
     try:
         win32gui.EnumChildWindows(parent_hwnd, callback, None)
     except Exception:
         pass
-    return result[0]
+    return children
+
+def _find_button_by_text(parent_hwnd, target_text):
+    """Ищет кнопку по тексту среди всех дочерних окон."""
+    for hwnd in _find_all_children(parent_hwnd):
+        try:
+            text = win32gui.GetWindowText(hwnd)
+            if target_text.lower() in text.lower():
+                return hwnd
+        except Exception:
+            pass
+    return None
+
+def _click_button(hwnd):
+    """Отправляет нажатие кнопки через WM_COMMAND."""
+    ctrl_id = win32gui.GetDlgCtrlID(hwnd)
+    parent = win32gui.GetParent(hwnd)
+    # BN_CLICKED = 0
+    win32gui.SendMessage(parent, win32con.WM_COMMAND, ctrl_id, hwnd)
 
 def _auto_save_loop():
     """Фоновый поток: автоматически нажимает Save Image в Demo.exe и закрывает диалог."""
     while True:
         try:
-            # Ищем окно Demo
             demo_hwnd = win32gui.FindWindow(None, "Demo")
             if demo_hwnd:
-                # Находим кнопку Save Image и нажимаем
-                save_btn = _find_child_by_text(demo_hwnd, "Save")
+                save_btn = _find_button_by_text(demo_hwnd, "Save Image")
                 if save_btn:
-                    win32gui.SendMessage(save_btn, win32con.BM_CLICK, 0, 0)
-                    time.sleep(0.3)
-                    # Закрываем всплывающий диалог "Fingerprint Image saved"
-                    for title in ["Information", "Информация", "Demo"]:
-                        dialog = win32gui.FindWindow(None, title)
-                        if dialog and dialog != demo_hwnd:
-                            ok_btn = _find_child_by_text(dialog, "OK")
-                            if ok_btn:
-                                win32gui.SendMessage(ok_btn, win32con.BM_CLICK, 0, 0)
-                                break
-        except Exception:
-            pass
+                    _click_button(save_btn)
+                    time.sleep(0.5)
+                    # Закрываем всплывающий диалог подтверждения
+                    all_windows = []
+                    def enum_callback(hwnd, results):
+                        results.append(hwnd)
+                        return True
+                    win32gui.EnumWindows(enum_callback, all_windows)
+                    for hwnd in all_windows:
+                        try:
+                            title = win32gui.GetWindowText(hwnd)
+                            if title in ["Information", "Информация"] or (title == "Demo" and hwnd != demo_hwnd):
+                                ok_btn = _find_button_by_text(hwnd, "OK")
+                                if ok_btn:
+                                    _click_button(ok_btn)
+                                    break
+                        except Exception:
+                            pass
+        except Exception as e:
+            print(f"Автосохранение: ошибка - {e}")
         time.sleep(2)
 
 def start_auto_save():
