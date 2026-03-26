@@ -340,7 +340,7 @@ def main():
             ball_body, ball_shape = add_ball(space, screen_width, screen_height)
 
             fp_image = pygame.image.load(FINGERPRINT_PATH)
-            image = pygame.transform.scale(fp_image, (350, 200))
+            image = fp_image
 
             while game_state == STATE_GAME_ACTIVE:
                 for event in pygame.event.get():
@@ -373,7 +373,8 @@ def main():
                 screen.fill((0, 0, 0))
                 space.debug_draw(draw_options)
                 pygame.draw.circle(screen, (255, 0, 0), (int(ball_body.position.x), int(ball_body.position.y)), ball_shape.radius)
-                screen.blit(image, (screen_width - 360, screen_height - 210))
+                iw, ih = image.get_size()
+                screen.blit(image, (screen_width - iw - 10, screen_height - ih - 10))
 
                 pygame.display.flip()
                 clock.tick(60)
