@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 import sys
 import pygame
 import pymunk
@@ -207,7 +208,9 @@ def fingerprint_screen():
         game_state = STATE_START_SCREEN
 
 def count_line_crossings(image_path):
-    img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+    # cv2.imread не поддерживает кириллицу в путях, используем imdecode
+    data = np.fromfile(image_path, dtype=np.uint8)
+    img = cv2.imdecode(data, cv2.IMREAD_GRAYSCALE)
     if img is None:
         print("Ошибка: изображение не найдено.")
         return 0
