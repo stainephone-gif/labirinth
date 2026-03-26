@@ -82,11 +82,17 @@ def _find_button_by_text(parent_hwnd, target_text):
     return None
 
 def _click_button(hwnd):
-    """Отправляет нажатие кнопки через WM_COMMAND."""
+    """Отправляет нажатие кнопки несколькими способами для совместимости с Delphi."""
+    # Способ 1: BM_CLICK напрямую кнопке
+    win32gui.PostMessage(hwnd, win32con.BM_CLICK, 0, 0)
+    # Способ 2: WM_COMMAND к главному окну (форме), а не панели
     ctrl_id = win32gui.GetDlgCtrlID(hwnd)
     parent = win32gui.GetParent(hwnd)
-    # BN_CLICKED = 0
-    win32gui.SendMessage(parent, win32con.WM_COMMAND, ctrl_id, hwnd)
+    # Поднимаемся до главного окна формы
+    while win32gui.GetParent(parent):
+        parent = win32gui.GetParent(parent)
+    # BN_CLICKED = 0, MAKEWPARAM(id, BN_CLICKED)
+    win32gui.PostMessage(parent, win32con.WM_COMMAND, ctrl_id, hwnd)
 
 def _auto_save_loop():
     """Фоновый поток: автоматически нажимает Save Image в Demo.exe и закрывает диалог."""
