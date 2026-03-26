@@ -147,12 +147,13 @@ def wait_for_fingerprint(timeout=120):
                 pygame.quit()
                 sys.exit()
 
-        if os.path.exists(FINGERPRINT_PATH):
+        if os.path.exists(FINGERPRINT_PATH) and os.path.getsize(FINGERPRINT_PATH) > 0:
             current_mtime = os.path.getmtime(FINGERPRINT_PATH)
             if old_mtime is None or current_mtime > old_mtime:
-                time.sleep(0.3)
-                print("Отпечаток получен.")
-                return True
+                time.sleep(0.5)
+                if os.path.getsize(FINGERPRINT_PATH) > 0:
+                    print("Отпечаток получен.")
+                    return True
 
         time.sleep(0.1)
 
@@ -198,10 +199,13 @@ def fingerprint_screen():
 # --- Анализ отпечатка ---
 
 def count_line_crossings(image_path):
+    if not os.path.exists(image_path) or os.path.getsize(image_path) == 0:
+        print("Ошибка: файл отпечатка пуст или не найден.")
+        return 0
     data = np.fromfile(image_path, dtype=np.uint8)
     img = cv2.imdecode(data, cv2.IMREAD_GRAYSCALE)
     if img is None:
-        print("Ошибка: изображение не найдено.")
+        print("Ошибка: не удалось декодировать изображение.")
         return 0
 
     _, binary_img = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)
