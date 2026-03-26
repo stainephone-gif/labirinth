@@ -42,8 +42,9 @@ os.environ['SDL_VIDEO_WINDOW_POS'] = "0,0"
 
 # Инициализация Pygame
 pygame.init()
-screen_width, screen_height = 1040, 810
-screen = pygame.display.set_mode((screen_width, screen_height), pygame.NOFRAME)
+display_info = pygame.display.Info()
+screen_width, screen_height = display_info.current_w, display_info.current_h
+screen = pygame.display.set_mode((screen_width, screen_height), pygame.FULLSCREEN)
 pygame.display.set_caption("Game")
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("arial", 20)
@@ -327,11 +328,12 @@ def main():
             crossings = analyze_fingerprint(FINGERPRINT_PATH)
             if crossings < 2:
                 crossings = 2
+            num_turns = crossings * 3
 
             space = pymunk.Space()
             space.gravity = (0, 900)
             add_walls(space, screen_width, screen_height)
-            rotation_bodies = add_spiral_barriers(space, (300, 300), 30, 25, num_turns=crossings)
+            rotation_bodies = add_spiral_barriers(space, (300, 300), 30, 25, num_turns=num_turns)
             ball_body, ball_shape = add_ball(space, screen_width, screen_height)
 
             fp_image = pygame.image.load(FINGERPRINT_PATH)
