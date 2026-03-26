@@ -7,7 +7,9 @@ import math
 import random
 import time
 import os
-import subprocess
+import threading
+import win32gui
+import win32con
 
 def color_to_tuple(color):
     if hasattr(color, 'a'):
@@ -45,9 +47,8 @@ pygame.display.set_caption("Game")
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("arial", 20)
 
-# Путь к файлу отпечатка (Demo.exe сохраняет сюда автоматически)
+# Путь к файлу отпечатка
 FINGERPRINT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Fingerprint.jpg')
-DEMO_EXE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Demo.exe')
 
 # Определение состояний игры
 STATE_START_SCREEN = "start_screen"
@@ -57,19 +58,53 @@ STATE_GAME_ACTIVE = "game_active"
 # Начальное состояние игры
 game_state = STATE_START_SCREEN
 
-def launch_demo():
-    """Запускает Demo.exe если он ещё не запущен."""
-    if os.path.exists(DEMO_EXE_PATH):
+def _find_child_by_text(parent_hwnd, target_text):
+    """Ищет дочернее окно (кнопку) по тексту."""
+    result = [None]
+    def callback(hwnd, _):
+        text = win32gui.GetWindowText(hwnd)
+        if target_text.lower() in text.lower():
+            result[0] = hwnd
+            return False  # Прекратить перебор
+        return True
+    try:
+        win32gui.EnumChildWindows(parent_hwnd, callback, None)
+    except Exception:
+        pass
+    return result[0]
+
+def _auto_save_loop():
+    """Фоновый поток: автоматически нажимает Save Image в Demo.exe и закрывает диалог."""
+    while True:
         try:
-            subprocess.Popen([DEMO_EXE_PATH], cwd=os.path.dirname(DEMO_EXE_PATH))
-            print("Demo.exe запущен.")
-        except Exception as e:
-            print(f"Не удалось запустить Demo.exe: {e}")
-    else:
-        print(f"Demo.exe не найден по пути: {DEMO_EXE_PATH}")
+            # Ищем окно Demo
+            demo_hwnd = win32gui.FindWindow(None, "Demo")
+            if demo_hwnd:
+                # Находим кнопку Save Image и нажимаем
+                save_btn = _find_child_by_text(demo_hwnd, "Save")
+                if save_btn:
+                    win32gui.SendMessage(save_btn, win32con.BM_CLICK, 0, 0)
+                    time.sleep(0.3)
+                    # Закрываем всплывающий диалог "Fingerprint Image saved"
+                    for title in ["Information", "Информация", "Demo"]:
+                        dialog = win32gui.FindWindow(None, title)
+                        if dialog and dialog != demo_hwnd:
+                            ok_btn = _find_child_by_text(dialog, "OK")
+                            if ok_btn:
+                                win32gui.SendMessage(ok_btn, win32con.BM_CLICK, 0, 0)
+                                break
+        except Exception:
+            pass
+        time.sleep(2)
+
+def start_auto_save():
+    """Запускает фоновый поток автосохранения отпечатка."""
+    thread = threading.Thread(target=_auto_save_loop, daemon=True)
+    thread.start()
+    print("Автосохранение отпечатка запущено (фоновый поток).")
 
 def wait_for_fingerprint(timeout=120):
-    """Ждёт появления или обновления файла отпечатка. Возвращает True если файл обновился."""
+    """Ждёт появления или обновления файла отпечатка."""
     old_mtime = None
     if os.path.exists(FINGERPRINT_PATH):
         old_mtime = os.path.getmtime(FINGERPRINT_PATH)
@@ -84,7 +119,7 @@ def wait_for_fingerprint(timeout=120):
         if os.path.exists(FINGERPRINT_PATH):
             current_mtime = os.path.getmtime(FINGERPRINT_PATH)
             if old_mtime is None or current_mtime > old_mtime:
-                time.sleep(0.3)  # Даём файлу дозаписаться
+                time.sleep(0.3)
                 print("Отпечаток получен.")
                 return True
 
@@ -96,8 +131,8 @@ def wait_for_fingerprint(timeout=120):
 def start_screen():
     global game_state
     screen.fill((0, 0, 0))
-    start_text = font.render("Приложите палец к сканеру и нажмите Init в Demo", True, (255, 255, 255))
-    hint_text = font.render("Нажмите любую клавишу чтобы продолжить", True, (150, 150, 150))
+    start_text = font.render("Запустите Demo.exe, нажмите Init, затем любую клавишу здесь", True, (255, 255, 255))
+    hint_text = font.render("Отпечаток сохранится автоматически при сканировании", True, (150, 150, 150))
     screen.blit(start_text, (screen_width // 2 - start_text.get_width() // 2, screen_height // 2 - 30))
     screen.blit(hint_text, (screen_width // 2 - hint_text.get_width() // 2, screen_height // 2 + 10))
     pygame.display.flip()
@@ -219,6 +254,9 @@ def add_rotating_circle_barriers(space, center, start_radius, radius_step, numbe
 
 def main():
     global game_state, screen, clock
+
+    # Запускаем фоновый поток автосохранения
+    start_auto_save()
 
     draw_options = CustomDrawOptions(screen)
 
