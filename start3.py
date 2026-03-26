@@ -167,10 +167,8 @@ def wait_for_fingerprint(timeout=120):
 def start_screen():
     global game_state
     screen.fill((0, 0, 0))
-    start_text = font.render("Запустите Demo.exe, нажмите Init, затем любую клавишу здесь", True, (255, 255, 255))
-    hint_text = font.render("Отпечаток сохранится автоматически при сканировании", True, (150, 150, 150))
-    screen.blit(start_text, (screen_width // 2 - start_text.get_width() // 2, screen_height // 2 - 30))
-    screen.blit(hint_text, (screen_width // 2 - hint_text.get_width() // 2, screen_height // 2 + 10))
+    start_text = font.render("Отсканируйте свой отпечаток пальца и нажмите любую клавишу", True, (255, 255, 255))
+    screen.blit(start_text, (screen_width // 2 - start_text.get_width() // 2, screen_height // 2))
     pygame.display.flip()
 
     waiting_for_keypress = True
