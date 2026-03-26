@@ -90,12 +90,26 @@ def _click_button(hwnd):
 
 def _auto_save_loop():
     """Фоновый поток: автоматически нажимает Save Image в Demo.exe и закрывает диалог."""
+    debug_printed = False
     while True:
         try:
             demo_hwnd = win32gui.FindWindow(None, "Demo")
             if demo_hwnd:
+                if not debug_printed:
+                    print(f"[DEBUG] Окно Demo найдено: {demo_hwnd}")
+                    # Выводим все дочерние окна для отладки
+                    for child in _find_all_children(demo_hwnd):
+                        try:
+                            text = win32gui.GetWindowText(child)
+                            cls = win32gui.GetClassName(child)
+                            print(f"  [DEBUG] hwnd={child}, class='{cls}', text='{text}'")
+                        except Exception:
+                            pass
+                    debug_printed = True
+
                 save_btn = _find_button_by_text(demo_hwnd, "Save Image")
                 if save_btn:
+                    print(f"[DEBUG] Кнопка Save Image найдена: {save_btn}")
                     _click_button(save_btn)
                     time.sleep(0.5)
                     # Закрываем всплывающий диалог подтверждения
@@ -107,13 +121,19 @@ def _auto_save_loop():
                     for hwnd in all_windows:
                         try:
                             title = win32gui.GetWindowText(hwnd)
-                            if title in ["Information", "Информация"] or (title == "Demo" and hwnd != demo_hwnd):
+                            if title in ["Information", "Информация", "Confirm", "Demo"] and hwnd != demo_hwnd:
                                 ok_btn = _find_button_by_text(hwnd, "OK")
                                 if ok_btn:
                                     _click_button(ok_btn)
                                     break
                         except Exception:
                             pass
+                else:
+                    if not debug_printed:
+                        print("[DEBUG] Кнопка Save Image НЕ найдена!")
+            else:
+                if not debug_printed:
+                    print("[DEBUG] Окно Demo НЕ найдено!")
         except Exception as e:
             print(f"Автосохранение: ошибка - {e}")
         time.sleep(2)
