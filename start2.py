@@ -7,8 +7,7 @@ import math
 import random
 import time
 import os
-import tkinter as tk
-from tkinter import filedialog
+import subprocess
 
 def color_to_tuple(color):
     if hasattr(color, 'a'):
@@ -46,6 +45,10 @@ pygame.display.set_caption("Game")
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("arial", 20)
 
+# Путь к файлу отпечатка (Demo.exe сохраняет сюда автоматически)
+FINGERPRINT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Fingerprint.jpg')
+DEMO_EXE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'Demo.exe')
+
 # Определение состояний игры
 STATE_START_SCREEN = "start_screen"
 STATE_LOAD_FINGERPRINT = "fingerprint_screen"
@@ -53,24 +56,50 @@ STATE_GAME_ACTIVE = "game_active"
 
 # Начальное состояние игры
 game_state = STATE_START_SCREEN
-fingerprint_path = None
 
-def select_fingerprint_file():
-    """Открывает диалог выбора файла отпечатка."""
-    root = tk.Tk()
-    root.withdraw()
-    file_path = filedialog.askopenfilename(
-        title="Выберите изображение отпечатка",
-        filetypes=[("Изображения", "*.jpg *.jpeg *.png *.bmp")]
-    )
-    root.destroy()
-    return file_path if file_path else None
+def launch_demo():
+    """Запускает Demo.exe если он ещё не запущен."""
+    if os.path.exists(DEMO_EXE_PATH):
+        try:
+            subprocess.Popen([DEMO_EXE_PATH], cwd=os.path.dirname(DEMO_EXE_PATH))
+            print("Demo.exe запущен.")
+        except Exception as e:
+            print(f"Не удалось запустить Demo.exe: {e}")
+    else:
+        print(f"Demo.exe не найден по пути: {DEMO_EXE_PATH}")
+
+def wait_for_fingerprint(timeout=120):
+    """Ждёт появления или обновления файла отпечатка. Возвращает True если файл обновился."""
+    old_mtime = None
+    if os.path.exists(FINGERPRINT_PATH):
+        old_mtime = os.path.getmtime(FINGERPRINT_PATH)
+
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        if os.path.exists(FINGERPRINT_PATH):
+            current_mtime = os.path.getmtime(FINGERPRINT_PATH)
+            if old_mtime is None or current_mtime > old_mtime:
+                time.sleep(0.3)  # Даём файлу дозаписаться
+                print("Отпечаток получен.")
+                return True
+
+        time.sleep(0.1)
+
+    print("Таймаут: отпечаток не получен.")
+    return False
 
 def start_screen():
     global game_state
     screen.fill((0, 0, 0))
-    start_text = font.render("Нажмите любую клавишу для загрузки отпечатка", True, (255, 255, 255))
-    screen.blit(start_text, (screen_width // 2 - start_text.get_width() // 2, screen_height // 2 - start_text.get_height() // 2))
+    start_text = font.render("Приложите палец к сканеру и нажмите Init в Demo", True, (255, 255, 255))
+    hint_text = font.render("Нажмите любую клавишу чтобы продолжить", True, (150, 150, 150))
+    screen.blit(start_text, (screen_width // 2 - start_text.get_width() // 2, screen_height // 2 - 30))
+    screen.blit(hint_text, (screen_width // 2 - hint_text.get_width() // 2, screen_height // 2 + 10))
     pygame.display.flip()
 
     waiting_for_keypress = True
@@ -82,6 +111,18 @@ def start_screen():
             if event.type == pygame.KEYDOWN:
                 waiting_for_keypress = False
                 game_state = STATE_LOAD_FINGERPRINT
+
+def fingerprint_screen():
+    global game_state
+    screen.fill((0, 0, 0))
+    wait_text = font.render("Приложите палец к сканеру...", True, (255, 255, 255))
+    screen.blit(wait_text, (screen_width // 2 - wait_text.get_width() // 2, screen_height // 2 - wait_text.get_height() // 2))
+    pygame.display.flip()
+
+    if wait_for_fingerprint():
+        game_state = STATE_GAME_ACTIVE
+    else:
+        game_state = STATE_START_SCREEN
 
 def count_line_crossings(image_path):
     img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
@@ -176,35 +217,11 @@ def add_rotating_circle_barriers(space, center, start_radius, radius_step, numbe
         rotation_bodies.append(body)
     return rotation_bodies
 
-def fingerprint_screen():
-    global game_state, fingerprint_path
-    screen.fill((0, 0, 0))
-    load_text = font.render("Загрузить отпечаток", True, (0, 0, 0))
-    load_button_rect = pygame.Rect(screen_width // 2 - 100, screen_height // 2 - 25, 200, 50)
-    pygame.draw.rect(screen, (255, 255, 255), load_button_rect)
-    load_text_rect = load_text.get_rect(center=load_button_rect.center)
-    screen.blit(load_text, load_text_rect)
-    pygame.display.flip()
-
-    waiting_for_button_press = True
-    while waiting_for_button_press:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                if load_button_rect.collidepoint(event.pos):
-                    selected = select_fingerprint_file()
-                    if selected:
-                        fingerprint_path = selected
-                        waiting_for_button_press = False
-                        game_state = STATE_GAME_ACTIVE
-                        print(f"Загружен отпечаток: {fingerprint_path}")
-                    else:
-                        print("Файл не выбран, попробуйте снова.")
-
 def main():
-    global game_state, screen, clock, fingerprint_path
+    global game_state, screen, clock
+
+    # Запускаем Demo.exe для работы со сканером
+    launch_demo()
 
     draw_options = CustomDrawOptions(screen)
 
@@ -222,7 +239,7 @@ def main():
 
         elif game_state == STATE_GAME_ACTIVE:
             screen.fill((0, 0, 0))
-            crossings = analyze_fingerprint(fingerprint_path)
+            crossings = analyze_fingerprint(FINGERPRINT_PATH)
             if crossings < 2:
                 crossings = 2
 
@@ -232,7 +249,7 @@ def main():
             rotation_bodies = add_rotating_circle_barriers(space, (300, 300), 50, 25, crossings)
             ball_body, ball_shape = add_ball(space, screen_width, screen_height)
 
-            fp_image = pygame.image.load(fingerprint_path)
+            fp_image = pygame.image.load(FINGERPRINT_PATH)
             image = pygame.transform.scale(fp_image, (350, 200))
 
             while game_state == STATE_GAME_ACTIVE:
