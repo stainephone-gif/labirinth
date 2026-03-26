@@ -24,7 +24,11 @@ class CustomDrawOptions(pymunk.pygame_util.DrawOptions):
         super().__init__(surface)
 
     def draw_segment(self, p1, p2, color):
-        pygame.draw.aalines(self.surface, color_to_tuple(color), False, [p1, p2])
+        color_tuple = color_to_tuple(color)
+        # Пропускаем почти чёрные линии (невидимые стены)
+        if color_tuple[0] < 10 and color_tuple[1] < 10 and color_tuple[2] < 10:
+            return
+        pygame.draw.aalines(self.surface, color_tuple, False, [p1, p2])
 
     def color_for_shape(self, shape):
         if hasattr(shape, 'shape_dynamic_color'):
@@ -233,7 +237,7 @@ def add_static_line(space, start_pos, end_pos, thickness=5, visible=True):
     shape = pymunk.Segment(body, start_pos, end_pos, thickness)
     shape.elasticity = 0.95
     if not visible:
-        shape.color = (0, 0, 0, 0)
+        shape.shape_dynamic_color = (0, 0, 0, 255)
     space.add(body, shape)
 
 def add_ball(space, screen_width, screen_height, radius=6):
