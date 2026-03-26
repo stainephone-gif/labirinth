@@ -228,10 +228,12 @@ def analyze_fingerprint(image_path):
 
 # --- Физика лабиринта ---
 
-def add_static_line(space, start_pos, end_pos, thickness=5):
+def add_static_line(space, start_pos, end_pos, thickness=5, visible=True):
     body = pymunk.Body(body_type=pymunk.Body.STATIC)
     shape = pymunk.Segment(body, start_pos, end_pos, thickness)
     shape.elasticity = 0.95
+    if not visible:
+        shape.color = (0, 0, 0, 0)
     space.add(body, shape)
 
 def add_ball(space, screen_width, screen_height, radius=6):
@@ -245,10 +247,10 @@ def add_ball(space, screen_width, screen_height, radius=6):
     return body, shape
 
 def add_walls(space, screen_width, screen_height):
-    add_static_line(space, (0, 0), (screen_width, 0))
-    add_static_line(space, (0, screen_height), (screen_width, screen_height))
-    add_static_line(space, (0, 0), (0, screen_height))
-    add_static_line(space, (screen_width, 0), (screen_width, screen_height))
+    add_static_line(space, (0, 0), (screen_width, 0), visible=False)
+    add_static_line(space, (0, screen_height), (screen_width, screen_height), visible=False)
+    add_static_line(space, (0, 0), (0, screen_height), visible=False)
+    add_static_line(space, (screen_width, 0), (screen_width, screen_height), visible=False)
 
 def add_spiral_barriers(space, center, start_radius, spacing, num_turns, segments_per_turn=30, gap_count=3, thickness=2):
     """Создаёт лабиринт в виде спирали Архимеда с прорезями."""
@@ -325,7 +327,7 @@ def main():
             crossings = analyze_fingerprint(FINGERPRINT_PATH)
             if crossings < 2:
                 crossings = 2
-            num_turns = crossings * 3
+            num_turns = crossings * 2
 
             space = pymunk.Space()
             space.gravity = (0, 900)
@@ -367,7 +369,7 @@ def main():
                 screen.fill((0, 0, 0))
                 space.debug_draw(draw_options)
                 pygame.draw.circle(screen, (255, 0, 0), (int(ball_body.position.x), int(ball_body.position.y)), ball_shape.radius)
-                screen.blit(image, (650, 550))
+                screen.blit(image, (screen_width - 360, screen_height - 210))
 
                 pygame.display.flip()
                 clock.tick(60)
