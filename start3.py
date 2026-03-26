@@ -245,10 +245,10 @@ def add_ball(space, screen_width, screen_height, radius=6):
     return body, shape
 
 def add_walls(space, screen_width, screen_height):
-    add_static_line(space, (0, 0), (screen_width, 0), thickness=10)
-    add_static_line(space, (0, screen_height), (screen_width, screen_height), thickness=10)
-    add_static_line(space, (0, 0), (0, screen_height), thickness=10)
-    add_static_line(space, (screen_width, 0), (screen_width, screen_height), thickness=10)
+    add_static_line(space, (0, 0), (screen_width, 0))
+    add_static_line(space, (0, screen_height), (screen_width, screen_height))
+    add_static_line(space, (0, 0), (0, screen_height))
+    add_static_line(space, (screen_width, 0), (screen_width, screen_height))
 
 def add_spiral_barriers(space, center, start_radius, spacing, num_turns, segments_per_turn=30, gap_count=3, thickness=2):
     """Создаёт лабиринт в виде спирали Архимеда с прорезями."""
