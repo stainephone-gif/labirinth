@@ -220,9 +220,6 @@ def add_rotating_circle_barriers(space, center, start_radius, radius_step, numbe
 def main():
     global game_state, screen, clock
 
-    # Запускаем Demo.exe для работы со сканером
-    launch_demo()
-
     draw_options = CustomDrawOptions(screen)
 
     while True:
