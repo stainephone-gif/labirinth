@@ -37,14 +37,11 @@ class CustomDrawOptions(pymunk.pygame_util.DrawOptions):
         else:
             return (255, 255, 255, 0)
 
-# Устанавливаем позицию окна перед инициализацией Pygame
-os.environ['SDL_VIDEO_WINDOW_POS'] = "0,0"
-
 # Инициализация Pygame
 pygame.init()
 display_info = pygame.display.Info()
 screen_width, screen_height = display_info.current_w, display_info.current_h
-screen = pygame.display.set_mode((screen_width, screen_height), pygame.FULLSCREEN)
+screen = pygame.display.set_mode((screen_width, screen_height), pygame.FULLSCREEN | pygame.NOFRAME)
 pygame.display.set_caption("Game")
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("arial", 20)
@@ -352,7 +349,9 @@ def main():
                 if game_state != STATE_GAME_ACTIVE:
                     break
 
-                if ball_body.position.y + ball_shape.radius >= screen_height:
+                if ball_body.position.y + ball_shape.radius >= screen_height - 10 or \
+                   ball_body.position.x < 0 or ball_body.position.x > screen_width or \
+                   ball_body.position.y < 0 or ball_body.position.y > screen_height:
                     game_state = STATE_START_SCREEN
                     break
 
