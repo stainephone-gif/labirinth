@@ -43,7 +43,7 @@ class CustomDrawOptions(pymunk.pygame_util.DrawOptions):
             return (255, 255, 255, 0)  # Белый цвет с полной непрозрачностью
 
 # Устанавливаем позицию окна перед инициализацией Pygame
-os.environ['SDL_VIDEO_WINDOW_POS'] = "-7,-780"
+os.environ['SDL_VIDEO_WINDOW_POS'] = "0,0"
 
 # Инициализация Pygame
 pygame.init()
