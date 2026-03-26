@@ -327,7 +327,7 @@ def main():
             crossings = analyze_fingerprint(FINGERPRINT_PATH)
             if crossings < 2:
                 crossings = 2
-            num_turns = crossings * 3
+            num_turns = crossings * 2
 
             space = pymunk.Space()
             space.gravity = (0, 900)
