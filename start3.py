@@ -58,6 +58,8 @@ STATE_GAME_ACTIVE = "game_active"
 
 # Начальное состояние игры
 game_state = STATE_START_SCREEN
+# Флаг: нужно ли сейчас опрашивать кнопку Save
+waiting_for_scan = False
 
 # --- Автосохранение отпечатка через win32gui ---
 
@@ -94,30 +96,32 @@ def _click_button(hwnd):
     win32gui.PostMessage(parent, win32con.WM_COMMAND, ctrl_id, hwnd)
 
 def _auto_save_loop():
-    """Фоновый поток: автоматически нажимает Save Image в Demo.exe и закрывает диалог."""
+    """Фоновый поток: нажимает Save Image в Demo.exe только когда игра ждёт отпечаток."""
     while True:
         try:
-            demo_hwnd = win32gui.FindWindow(None, "Demo")
-            if demo_hwnd:
-                save_btn = _find_button_by_text(demo_hwnd, "Save Image")
-                if save_btn:
-                    _click_button(save_btn)
-                    time.sleep(0.5)
-                    all_windows = []
-                    def enum_callback(hwnd, results):
-                        results.append(hwnd)
-                        return True
-                    win32gui.EnumWindows(enum_callback, all_windows)
-                    for hwnd in all_windows:
-                        try:
-                            title = win32gui.GetWindowText(hwnd)
-                            if title in ["Information", "Информация", "Confirm", "Demo"] and hwnd != demo_hwnd:
-                                ok_btn = _find_button_by_text(hwnd, "OK")
-                                if ok_btn:
-                                    _click_button(ok_btn)
-                                    break
-                        except Exception:
-                            pass
+            if waiting_for_scan:
+                demo_hwnd = win32gui.FindWindow(None, "Demo")
+                if demo_hwnd:
+                    save_btn = _find_button_by_text(demo_hwnd, "Save Image")
+                    if save_btn:
+                        _click_button(save_btn)
+                        time.sleep(0.5)
+                        # Закрываем диалог подтверждения
+                        all_windows = []
+                        def enum_callback(hwnd, results):
+                            results.append(hwnd)
+                            return True
+                        win32gui.EnumWindows(enum_callback, all_windows)
+                        for hwnd in all_windows:
+                            try:
+                                title = win32gui.GetWindowText(hwnd)
+                                if title in ["Information", "Информация", "Confirm", "Demo"] and hwnd != demo_hwnd:
+                                    ok_btn = _find_button_by_text(hwnd, "OK")
+                                    if ok_btn:
+                                        _click_button(ok_btn)
+                                        break
+                            except Exception:
+                                pass
         except Exception:
             pass
         time.sleep(2)
@@ -177,15 +181,18 @@ def start_screen():
                 game_state = STATE_LOAD_FINGERPRINT
 
 def fingerprint_screen():
-    global game_state
+    global game_state, waiting_for_scan
     screen.fill((0, 0, 0))
     wait_text = font.render("Приложите палец к сканеру...", True, (255, 255, 255))
     screen.blit(wait_text, (screen_width // 2 - wait_text.get_width() // 2, screen_height // 2 - wait_text.get_height() // 2))
     pygame.display.flip()
 
+    waiting_for_scan = True
     if wait_for_fingerprint():
+        waiting_for_scan = False
         game_state = STATE_GAME_ACTIVE
     else:
+        waiting_for_scan = False
         game_state = STATE_START_SCREEN
 
 # --- Анализ отпечатка ---
