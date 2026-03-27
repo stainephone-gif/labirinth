@@ -71,7 +71,7 @@ _ctrl_last_press_time = 0
 def check_reset_shortcut():
     global _ctrl_press_count, _ctrl_both_pressed, _ctrl_last_press_time, game_state
     keys = pygame.key.get_pressed()
-    both_pressed = keys[pygame.K_LCTRL] and keys[pygame.K_RCTRL]
+    both_pressed = keys[pygame.K_KP4] and keys[pygame.K_KP6]
     current_time = time.time()
     if both_pressed and not _ctrl_both_pressed:
         if current_time - _ctrl_last_press_time > 3.0:
