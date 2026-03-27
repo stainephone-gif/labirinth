@@ -184,7 +184,7 @@ def start_screen():
 def fingerprint_screen():
     global game_state, waiting_for_scan
     screen.fill((0, 0, 0))
-    wait_text = font.render("Приложите палец к сканеру...", True, (255, 255, 255))
+    wait_text = font.render("Загрузка...", True, (255, 255, 255))
     screen.blit(wait_text, (screen_width // 2 - wait_text.get_width() // 2, screen_height // 2 - wait_text.get_height() // 2))
     pygame.display.flip()
 
