@@ -42,10 +42,10 @@ class CustomDrawOptions(pymunk.pygame_util.DrawOptions):
             return (255, 255, 255, 0)
 
 # Инициализация Pygame
+os.environ['SDL_VIDEO_WINDOW_POS'] = '1920,0'
 pygame.init()
-display_info = pygame.display.Info()
-screen_width, screen_height = display_info.current_w, display_info.current_h
-screen = pygame.display.set_mode((screen_width, screen_height), pygame.FULLSCREEN | pygame.NOFRAME)
+screen_width, screen_height = 1920, 1080
+screen = pygame.display.set_mode((screen_width, screen_height), pygame.NOFRAME)
 pygame.display.set_caption("Game")
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("arial", 20)
@@ -184,7 +184,7 @@ def start_screen():
 def fingerprint_screen():
     global game_state, waiting_for_scan
     screen.fill((0, 0, 0))
-    wait_text = font.render("Приложите палец к сканеру...", True, (255, 255, 255))
+    wait_text = font.render("Загрузка...", True, (255, 255, 255))
     screen.blit(wait_text, (screen_width // 2 - wait_text.get_width() // 2, screen_height // 2 - wait_text.get_height() // 2))
     pygame.display.flip()
 
