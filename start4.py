@@ -59,6 +59,9 @@ STATE_START_SCREEN = "start_screen"
 STATE_LOAD_FINGERPRINT = "fingerprint_screen"
 STATE_GAME_ACTIVE = "game_active"
 
+# Время бездействия (сек), после которого игра сбрасывается на стартовый экран
+IDLE_RESET_TIMEOUT = 60
+
 # Начальное состояние игры
 game_state = STATE_START_SCREEN
 # Флаг: нужно ли сейчас опрашивать кнопку Save
@@ -365,6 +368,8 @@ def main():
             fp_image = pygame.image.load(FINGERPRINT_PATH)
             image = fp_image
 
+            last_action_time = time.time()
+
             while game_state == STATE_GAME_ACTIVE:
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
@@ -389,9 +394,15 @@ def main():
                 if keys[pygame.K_KP4]:
                     for body in rotation_bodies:
                         body.angle -= 0.05
+                    last_action_time = time.time()
                 if keys[pygame.K_KP6]:
                     for body in rotation_bodies:
                         body.angle += 0.05
+                    last_action_time = time.time()
+
+                if time.time() - last_action_time > IDLE_RESET_TIMEOUT:
+                    game_state = STATE_START_SCREEN
+                    break
 
                 space.step(1/50.0)
                 screen.fill((0, 0, 0))
