@@ -59,6 +59,9 @@ STATE_START_SCREEN = "start_screen"
 STATE_LOAD_FINGERPRINT = "fingerprint_screen"
 STATE_GAME_ACTIVE = "game_active"
 
+# Время бездействия (сек), после которого игра сбрасывается на стартовый экран
+IDLE_RESET_TIMEOUT = 60
+
 # Начальное состояние игры
 game_state = STATE_START_SCREEN
 # Флаг: нужно ли сейчас опрашивать кнопку Save
@@ -118,6 +121,25 @@ def _click_button(hwnd):
         parent = win32gui.GetParent(parent)
     win32gui.PostMessage(parent, win32con.WM_COMMAND, ctrl_id, hwnd)
 
+def _close_confirmation_popup(demo_hwnd):
+    """Закрывает всплывающее окно подтверждения (кнопка OK), если оно появилось."""
+    all_windows = []
+    def enum_callback(hwnd, results):
+        results.append(hwnd)
+        return True
+    win32gui.EnumWindows(enum_callback, all_windows)
+    for hwnd in all_windows:
+        try:
+            title = win32gui.GetWindowText(hwnd)
+            if title in ["Information", "Информация", "Confirm", "Demo"] and hwnd != demo_hwnd:
+                ok_btn = _find_button_by_text(hwnd, "OK")
+                if ok_btn:
+                    _click_button(ok_btn)
+                    return True
+        except Exception:
+            pass
+    return False
+
 def _auto_save_loop():
     """Фоновый поток: нажимает Save Image в Demo.exe только когда игра ждёт отпечаток."""
     while True:
@@ -129,22 +151,24 @@ def _auto_save_loop():
                     if save_btn:
                         _click_button(save_btn)
                         time.sleep(0.5)
-                        # Закрываем диалог подтверждения
-                        all_windows = []
-                        def enum_callback(hwnd, results):
-                            results.append(hwnd)
-                            return True
-                        win32gui.EnumWindows(enum_callback, all_windows)
-                        for hwnd in all_windows:
-                            try:
-                                title = win32gui.GetWindowText(hwnd)
-                                if title in ["Information", "Информация", "Confirm", "Demo"] and hwnd != demo_hwnd:
-                                    ok_btn = _find_button_by_text(hwnd, "OK")
-                                    if ok_btn:
-                                        _click_button(ok_btn)
-                                        break
-                            except Exception:
-                                pass
+                        _close_confirmation_popup(demo_hwnd)
+        except Exception:
+            pass
+        time.sleep(2)
+
+def _auto_connect_sensor_loop():
+    """Фоновый поток: при старте подключается к датчику (Connect Sensor) и закрывает диалог подтверждения."""
+    while True:
+        try:
+            demo_hwnd = win32gui.FindWindow(None, "Demo")
+            if demo_hwnd:
+                connect_btn = _find_button_by_text(demo_hwnd, "Connect Sensor")
+                if connect_btn:
+                    _click_button(connect_btn)
+                    time.sleep(1)
+                    _close_confirmation_popup(demo_hwnd)
+                    print("Датчик подключен.")
+                    return
         except Exception:
             pass
         time.sleep(2)
@@ -154,6 +178,12 @@ def start_auto_save():
     thread = threading.Thread(target=_auto_save_loop, daemon=True)
     thread.start()
     print("Автосохранение отпечатка запущено.")
+
+def start_auto_connect_sensor():
+    """Запускает фоновый поток подключения к датчику отпечатков при старте."""
+    thread = threading.Thread(target=_auto_connect_sensor_loop, daemon=True)
+    thread.start()
+    print("Автоподключение датчика запущено.")
 
 # --- Ожидание отпечатка ---
 
@@ -333,6 +363,7 @@ def add_spiral_barriers(space, center, start_radius, spacing, num_turns, segment
 def main():
     global game_state, screen, clock
 
+    start_auto_connect_sensor()
     start_auto_save()
 
     draw_options = CustomDrawOptions(screen)
@@ -365,6 +396,8 @@ def main():
             fp_image = pygame.image.load(FINGERPRINT_PATH)
             image = fp_image
 
+            last_action_time = time.time()
+
             while game_state == STATE_GAME_ACTIVE:
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
@@ -389,9 +422,15 @@ def main():
                 if keys[pygame.K_KP4]:
                     for body in rotation_bodies:
                         body.angle -= 0.05
+                    last_action_time = time.time()
                 if keys[pygame.K_KP6]:
                     for body in rotation_bodies:
                         body.angle += 0.05
+                    last_action_time = time.time()
+
+                if time.time() - last_action_time > IDLE_RESET_TIMEOUT:
+                    game_state = STATE_START_SCREEN
+                    break
 
                 space.step(1/50.0)
                 screen.fill((0, 0, 0))
