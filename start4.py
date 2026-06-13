@@ -121,6 +121,25 @@ def _click_button(hwnd):
         parent = win32gui.GetParent(parent)
     win32gui.PostMessage(parent, win32con.WM_COMMAND, ctrl_id, hwnd)
 
+def _close_confirmation_popup(demo_hwnd):
+    """Закрывает всплывающее окно подтверждения (кнопка OK), если оно появилось."""
+    all_windows = []
+    def enum_callback(hwnd, results):
+        results.append(hwnd)
+        return True
+    win32gui.EnumWindows(enum_callback, all_windows)
+    for hwnd in all_windows:
+        try:
+            title = win32gui.GetWindowText(hwnd)
+            if title in ["Information", "Информация", "Confirm", "Demo"] and hwnd != demo_hwnd:
+                ok_btn = _find_button_by_text(hwnd, "OK")
+                if ok_btn:
+                    _click_button(ok_btn)
+                    return True
+        except Exception:
+            pass
+    return False
+
 def _auto_save_loop():
     """Фоновый поток: нажимает Save Image в Demo.exe только когда игра ждёт отпечаток."""
     while True:
@@ -132,22 +151,24 @@ def _auto_save_loop():
                     if save_btn:
                         _click_button(save_btn)
                         time.sleep(0.5)
-                        # Закрываем диалог подтверждения
-                        all_windows = []
-                        def enum_callback(hwnd, results):
-                            results.append(hwnd)
-                            return True
-                        win32gui.EnumWindows(enum_callback, all_windows)
-                        for hwnd in all_windows:
-                            try:
-                                title = win32gui.GetWindowText(hwnd)
-                                if title in ["Information", "Информация", "Confirm", "Demo"] and hwnd != demo_hwnd:
-                                    ok_btn = _find_button_by_text(hwnd, "OK")
-                                    if ok_btn:
-                                        _click_button(ok_btn)
-                                        break
-                            except Exception:
-                                pass
+                        _close_confirmation_popup(demo_hwnd)
+        except Exception:
+            pass
+        time.sleep(2)
+
+def _auto_connect_sensor_loop():
+    """Фоновый поток: при старте подключается к датчику (Connect Sensor) и закрывает диалог подтверждения."""
+    while True:
+        try:
+            demo_hwnd = win32gui.FindWindow(None, "Demo")
+            if demo_hwnd:
+                connect_btn = _find_button_by_text(demo_hwnd, "Connect Sensor")
+                if connect_btn:
+                    _click_button(connect_btn)
+                    time.sleep(1)
+                    _close_confirmation_popup(demo_hwnd)
+                    print("Датчик подключен.")
+                    return
         except Exception:
             pass
         time.sleep(2)
@@ -157,6 +178,12 @@ def start_auto_save():
     thread = threading.Thread(target=_auto_save_loop, daemon=True)
     thread.start()
     print("Автосохранение отпечатка запущено.")
+
+def start_auto_connect_sensor():
+    """Запускает фоновый поток подключения к датчику отпечатков при старте."""
+    thread = threading.Thread(target=_auto_connect_sensor_loop, daemon=True)
+    thread.start()
+    print("Автоподключение датчика запущено.")
 
 # --- Ожидание отпечатка ---
 
@@ -336,6 +363,7 @@ def add_spiral_barriers(space, center, start_radius, spacing, num_turns, segment
 def main():
     global game_state, screen, clock
 
+    start_auto_connect_sensor()
     start_auto_save()
 
     draw_options = CustomDrawOptions(screen)
