@@ -394,7 +394,10 @@ def main():
             ball_body, ball_shape = add_ball(space, screen_width, screen_height)
 
             fp_image = pygame.image.load(FINGERPRINT_PATH)
-            image = fp_image
+            fp_w, fp_h = fp_image.get_size()
+            thumb_w = max(80, min(200, screen_width // 6))
+            thumb_h = int(thumb_w * fp_h / fp_w)
+            image = pygame.transform.smoothscale(fp_image, (thumb_w, thumb_h))
 
             last_action_time = time.time()
 
