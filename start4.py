@@ -157,17 +157,21 @@ def _auto_save_loop():
         time.sleep(2)
 
 def _auto_connect_sensor_loop():
-    """Фоновый поток: при старте подключается к датчику (Connect Sensor) и закрывает диалог подтверждения."""
+    """Фоновый поток: при старте переключает формат на JPG, подключается к датчику и закрывает диалог подтверждения."""
     while True:
         try:
             demo_hwnd = win32gui.FindWindow(None, "Demo")
             if demo_hwnd:
+                jpg_btn = _find_button_by_text(demo_hwnd, "JPG")
+                if jpg_btn:
+                    _click_button(jpg_btn)
+
                 connect_btn = _find_button_by_text(demo_hwnd, "Connect Sensor")
                 if connect_btn:
                     _click_button(connect_btn)
                     time.sleep(1)
                     _close_confirmation_popup(demo_hwnd)
-                    print("Датчик подключен.")
+                    print("Датчик подключен, формат JPG выбран.")
                     return
         except Exception:
             pass
