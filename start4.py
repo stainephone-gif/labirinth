@@ -223,9 +223,55 @@ def wait_for_fingerprint(timeout=120):
 
 # --- Экраны ---
 
+# Кэш фонового изображения метафорического отпечатка
+_fingerprint_bg_surface = None
+
+def _build_fingerprint_background():
+    """Рисует метафорический отпечаток пальца: концентрические петли-гребни,
+    тёмно-серые линии на чёрном фоне. Строится один раз и кэшируется."""
+    surface = pygame.Surface((screen_width, screen_height))
+    surface.fill((0, 0, 0))
+
+    cx = screen_width // 2
+    cy = screen_height // 2
+    base_size = min(screen_width, screen_height)
+
+    num_ridges = 34            # количество гребней отпечатка
+    spacing = base_size / 90.0  # расстояние между гребнями
+    squish = 1.18              # вертикальное растяжение (овальность)
+
+    for r in range(1, num_ridges + 1):
+        radius = base_size * 0.07 + r * spacing
+        # ядро отпечатка смещено вверх — асимметрия как у настоящей петли
+        core_shift = (num_ridges - r) * (base_size * 0.0012)
+        # затухание яркости к краям
+        brightness = int(46 - r * 0.5)
+        if brightness < 14:
+            brightness = 14
+        color = (brightness, brightness, brightness)
+
+        points = []
+        steps = 120
+        for i in range(steps + 1):
+            theta = 2 * math.pi * i / steps
+            # лёгкая деформация, чтобы линии "дышали" как папиллярный узор
+            wobble = 1.0 + 0.05 * math.sin(theta * 3 + r * 0.4)
+            x = cx + radius * math.cos(theta) * wobble
+            y = cy - core_shift + radius * squish * math.sin(theta) * wobble
+            points.append((x, y))
+        pygame.draw.aalines(surface, color, True, points)
+
+    return surface
+
+def get_fingerprint_background():
+    global _fingerprint_bg_surface
+    if _fingerprint_bg_surface is None:
+        _fingerprint_bg_surface = _build_fingerprint_background()
+    return _fingerprint_bg_surface
+
 def start_screen():
     global game_state
-    screen.fill((0, 0, 0))
+    screen.blit(get_fingerprint_background(), (0, 0))
     start_text = font.render("Отсканируйте свой отпечаток пальца и нажмите любую клавишу", True, (255, 255, 255))
     screen.blit(start_text, (screen_width // 2 - start_text.get_width() // 2, screen_height // 2))
     pygame.display.flip()
@@ -242,7 +288,7 @@ def start_screen():
 
 def fingerprint_screen():
     global game_state, waiting_for_scan
-    screen.fill((0, 0, 0))
+    screen.blit(get_fingerprint_background(), (0, 0))
     wait_text = font.render("Загрузка...", True, (255, 255, 255))
     screen.blit(wait_text, (screen_width // 2 - wait_text.get_width() // 2, screen_height // 2 - wait_text.get_height() // 2))
     pygame.display.flip()
