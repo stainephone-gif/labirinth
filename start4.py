@@ -171,7 +171,8 @@ def _auto_connect_sensor_loop():
                     _click_button(connect_btn)
                     time.sleep(1)
                     _close_confirmation_popup(demo_hwnd)
-                    print("Датчик подключен, формат JPG выбран.")
+                    win32gui.ShowWindow(demo_hwnd, win32con.SW_HIDE)
+                    print("Датчик подключен, формат JPG выбран, окно Demo скрыто.")
                     return
         except Exception:
             pass
