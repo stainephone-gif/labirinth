@@ -152,12 +152,14 @@ def _auto_save_loop():
                         _click_button(save_btn)
                         time.sleep(0.5)
                         _close_confirmation_popup(demo_hwnd)
+                        _bring_game_to_front()
         except Exception:
             pass
         time.sleep(2)
 
 def _auto_connect_sensor_loop():
-    """Фоновый поток: при старте переключает формат на JPG, подключается к датчику и закрывает диалог подтверждения."""
+    """Фоновый поток: при старте переключает формат на JPG, подключается к датчику,
+    закрывает диалог подтверждения и сворачивает окно Demo.exe, чтобы оно не перекрывало игру."""
     while True:
         try:
             demo_hwnd = win32gui.FindWindow(None, "Demo")
@@ -171,11 +173,25 @@ def _auto_connect_sensor_loop():
                     _click_button(connect_btn)
                     time.sleep(1)
                     _close_confirmation_popup(demo_hwnd)
-                    print("Датчик подключен, формат JPG выбран.")
+                    win32gui.ShowWindow(demo_hwnd, win32con.SW_MINIMIZE)
+                    _bring_game_to_front()
+                    print("Датчик подключен, формат JPG выбран, окно Demo свёрнуто.")
                     return
         except Exception:
             pass
         time.sleep(2)
+
+def _bring_game_to_front():
+    """Поднимает окно игры на передний план и закрепляет его поверх остальных окон."""
+    try:
+        game_hwnd = pygame.display.get_wm_info()['window']
+        win32gui.SetWindowPos(
+            game_hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0,
+            win32con.SWP_NOMOVE | win32con.SWP_NOSIZE
+        )
+        win32gui.SetForegroundWindow(game_hwnd)
+    except Exception:
+        pass
 
 def start_auto_save():
     """Запускает фоновый поток автосохранения отпечатка."""
