@@ -285,7 +285,7 @@ def _build_fingerprint_background():
         # ядро отпечатка смещено вверх — асимметрия как у настоящей петли
         core_shift = (num_ridges - r) * (base_size * 0.0012)
         # затухание яркости к краям
-        brightness = int(46 - r * 0.5)
+        brightness = int(86 - r * 0.5)
         if brightness < 14:
             brightness = 14
         color = (brightness, brightness, brightness)
