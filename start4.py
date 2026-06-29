@@ -64,6 +64,11 @@ STATE_GAME_ACTIVE = "game_active"
 # Время бездействия (сек), после которого игра сбрасывается на стартовый экран
 IDLE_RESET_TIMEOUT = 60
 
+# Коэффициент масштаба относительно эталонного разрешения 1920x1080.
+# Размеры лабиринта, шара и линий умножаются на него, чтобы пропорции
+# выглядели одинаково на любом разрешении (1280, Full HD, 4K).
+SCALE = min(screen_width / 1920.0, screen_height / 1080.0)
+
 # Начальное состояние игры
 game_state = STATE_START_SCREEN
 # Флаг: нужно ли сейчас опрашивать кнопку Save
@@ -403,6 +408,7 @@ def add_static_line(space, start_pos, end_pos, thickness=5, visible=True):
     space.add(body, shape)
 
 def add_ball(space, screen_width, screen_height, radius=6):
+    radius = max(2, radius * SCALE)
     mass = 1
     moment = pymunk.moment_for_circle(mass, 0, radius)
     body = pymunk.Body(mass, moment)
@@ -420,6 +426,10 @@ def add_walls(space, screen_width, screen_height):
 
 def add_spiral_barriers(space, center, start_radius, spacing, num_turns, segments_per_turn=30, gap_count=3, thickness=2):
     """Создаёт лабиринт в виде спирали Архимеда с прорезями."""
+    # Масштабируем размеры лабиринта под текущее разрешение
+    start_radius = start_radius * SCALE
+    spacing = spacing * SCALE
+    thickness = max(1, thickness * SCALE)
     center_x = screen_width // 3
     center_y = screen_height // 2
     center = (center_x, center_y)
