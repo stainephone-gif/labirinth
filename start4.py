@@ -173,9 +173,9 @@ def _auto_connect_sensor_loop():
                     _click_button(connect_btn)
                     time.sleep(1)
                     _close_confirmation_popup(demo_hwnd)
-                    win32gui.ShowWindow(demo_hwnd, win32con.SW_MINIMIZE)
+                    win32gui.ShowWindow(demo_hwnd, win32con.SW_HIDE)
                     _bring_game_to_front()
-                    print("Датчик подключен, формат JPG выбран, окно Demo свёрнуто.")
+                    print("Датчик подключен, формат JPG выбран, окно Demo скрыто.")
                     return
         except Exception:
             pass
