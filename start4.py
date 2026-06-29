@@ -494,6 +494,8 @@ def main():
             fingerprint_screen()
 
         elif game_state == STATE_GAME_ACTIVE:
+            # Возвращаем фокус игре после сканирования (Demo.exe мог перехватить активность)
+            _bring_game_to_front()
             screen.fill((0, 0, 0))
             crossings = analyze_fingerprint(FINGERPRINT_PATH)
             if crossings < 2:
