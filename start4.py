@@ -11,6 +11,7 @@ import os
 import threading
 import win32gui
 import win32con
+import win32api
 
 def color_to_tuple(color):
     if hasattr(color, 'a'):
@@ -183,14 +184,21 @@ def _auto_connect_sensor_loop():
         time.sleep(2)
 
 def _bring_game_to_front():
-    """Поднимает окно игры на передний план и закрепляет его поверх остальных окон."""
+    """Поднимает окно игры на передний план и закрепляет его поверх остальных окон.
+    Обходит защиту Windows от смены активного окна симуляцией нажатия Alt."""
     try:
         game_hwnd = pygame.display.get_wm_info()['window']
+        win32gui.ShowWindow(game_hwnd, win32con.SW_SHOW)
         win32gui.SetWindowPos(
             game_hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0,
             win32con.SWP_NOMOVE | win32con.SWP_NOSIZE
         )
+        # Симуляция Alt снимает блокировку SetForegroundWindow,
+        # когда активным является другой процесс (Demo.exe)
+        win32api.keybd_event(win32con.VK_MENU, 0, 0, 0)
+        win32api.keybd_event(win32con.VK_MENU, 0, win32con.KEYEVENTF_KEYUP, 0)
         win32gui.SetForegroundWindow(game_hwnd)
+        win32gui.BringWindowToTop(game_hwnd)
     except Exception:
         pass
 
