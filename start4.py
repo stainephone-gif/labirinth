@@ -278,17 +278,27 @@ def _build_fingerprint_background():
     base_size = min(screen_width, screen_height)
 
     num_ridges = 34            # количество гребней отпечатка
-    spacing = base_size / 90.0  # расстояние между гребнями
     squish = 1.18              # вертикальное растяжение (овальность)
+    wobble_amp = 0.05          # амплитуда "дыхания" линий
+    wobble_max = 1.0 + wobble_amp
+
+    # Максимальный радиус, при котором самый большой гребень не выходит за экран
+    # (учитываем овальность squish, деформацию wobble и отступ 5% от краёв)
+    margin = 0.95
+    max_rx = (screen_width / 2) * margin / wobble_max
+    max_ry = (screen_height / 2) * margin / (squish * wobble_max)
+    start_radius = base_size * 0.07
+    max_radius = min(max_rx, max_ry)
+    spacing = (max_radius - start_radius) / num_ridges  # расстояние между гребнями
 
     for r in range(1, num_ridges + 1):
-        radius = base_size * 0.07 + r * spacing
+        radius = start_radius + r * spacing
         # ядро отпечатка смещено вверх — асимметрия как у настоящей петли
         core_shift = (num_ridges - r) * (base_size * 0.0012)
         # затухание яркости к краям
-        brightness = int(46 - r * 0.5)
-        if brightness < 14:
-            brightness = 14
+        brightness = int(88 - r * 0.9)
+        if brightness < 22:
+            brightness = 22
         color = (brightness, brightness, brightness)
 
         points = []
@@ -296,7 +306,7 @@ def _build_fingerprint_background():
         for i in range(steps + 1):
             theta = 2 * math.pi * i / steps
             # лёгкая деформация, чтобы линии "дышали" как папиллярный узор
-            wobble = 1.0 + 0.05 * math.sin(theta * 3 + r * 0.4)
+            wobble = 1.0 + wobble_amp * math.sin(theta * 3 + r * 0.4)
             x = cx + radius * math.cos(theta) * wobble
             y = cy - core_shift + radius * squish * math.sin(theta) * wobble
             points.append((x, y))
