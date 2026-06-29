@@ -193,6 +193,30 @@ def _bring_game_to_front():
     except Exception:
         pass
 
+def _window_guard_loop():
+    """Постоянный фоновый поток: держит окно игры поверх всех окон (перекрывая панель задач)
+    и закрывает любые всплывающие окна Demo.exe ('Fingerprint Image saved' и т.п.)."""
+    while True:
+        try:
+            game_hwnd = pygame.display.get_wm_info()['window']
+            # Удерживаем игру поверх панели задач без кражи фокуса/мерцания
+            win32gui.SetWindowPos(
+                game_hwnd, win32con.HWND_TOPMOST, 0, 0, 0, 0,
+                win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE
+            )
+            # Закрываем всплывающие окна Demo, если появились
+            demo_hwnd = win32gui.FindWindow(None, "Demo")
+            _close_confirmation_popup(demo_hwnd)
+        except Exception:
+            pass
+        time.sleep(0.3)
+
+def start_window_guard():
+    """Запускает фоновый поток удержания окна игры поверх и закрытия диалогов Demo."""
+    thread = threading.Thread(target=_window_guard_loop, daemon=True)
+    thread.start()
+    print("Сторож окна запущен.")
+
 def start_auto_save():
     """Запускает фоновый поток автосохранения отпечатка."""
     thread = threading.Thread(target=_auto_save_loop, daemon=True)
@@ -431,6 +455,7 @@ def main():
 
     start_auto_connect_sensor()
     start_auto_save()
+    start_window_guard()
 
     draw_options = CustomDrawOptions(screen)
 
