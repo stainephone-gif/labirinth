@@ -74,25 +74,9 @@ game_state = STATE_START_SCREEN
 # Флаг: нужно ли сейчас опрашивать кнопку Save
 waiting_for_scan = False
 
-# Принудительный сброс: три одновременных нажатия Left Ctrl + Right Ctrl
-_ctrl_press_count = 0
-_ctrl_both_pressed = False
-_ctrl_last_press_time = 0
-
 def check_reset_shortcut():
-    global _ctrl_press_count, _ctrl_both_pressed, _ctrl_last_press_time, game_state
-    keys = pygame.key.get_pressed()
-    both_pressed = keys[pygame.K_KP4] and keys[pygame.K_KP6]
-    current_time = time.time()
-    if both_pressed and not _ctrl_both_pressed:
-        if current_time - _ctrl_last_press_time > 3.0:
-            _ctrl_press_count = 0
-        _ctrl_press_count += 1
-        _ctrl_last_press_time = current_time
-        if _ctrl_press_count >= 3:
-            _ctrl_press_count = 0
-            game_state = STATE_START_SCREEN
-    _ctrl_both_pressed = both_pressed
+    # Сброс по комбинации клавиш отключён.
+    pass
 
 # --- Автосохранение отпечатка через win32gui ---
 
