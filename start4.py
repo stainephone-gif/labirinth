@@ -48,6 +48,7 @@ display_info = pygame.display.Info()
 screen_width, screen_height = display_info.current_w, display_info.current_h
 screen = pygame.display.set_mode((screen_width, screen_height), pygame.NOFRAME)
 pygame.display.set_caption("Game")
+pygame.mouse.set_visible(False)  # Скрываем курсор мыши
 clock = pygame.time.Clock()
 font = pygame.font.SysFont("arial", 20)
 
@@ -452,6 +453,9 @@ def add_spiral_barriers(space, center, start_radius, spacing, num_turns, segment
 
 def main():
     global game_state, screen, clock
+
+    # Активируем окно игры, чтобы клавиши работали сразу, без клика мышью
+    _bring_game_to_front()
 
     start_auto_connect_sensor()
     start_auto_save()
